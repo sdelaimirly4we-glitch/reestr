@@ -115,10 +115,9 @@
       <label class="req">Исполнитель (ФИО)</label><input name="worker" required>
       <label>Контакт / ID исполнителя</label><input name="contact" placeholder="телефон или ID в Сменах">
       <div class="row2">
-        <div><label>Регион</label><select name="region"></select></div>
-        <div><label>Объект</label><select name="object"></select></div>
+        <div><label>Диспетчерская</label><select name="object"></select></div>
+        <div><label>Категория</label><select name="category"></select></div>
       </div>
-      <label>Категория</label><select name="category"></select>
       <label class="req">Суть вопроса</label><textarea name="issue" required placeholder="Коротко: что случилось, какая смена, какая сумма"></textarea>
       <label>Что сейчас с обращением</label>
       <div class="seg">
@@ -130,7 +129,7 @@
   </section>
 
   <!-- ОБРАЩЕНИЯ -->
-  <section id="tab-list">
+  <section id="tab-list" class="hidden">
     <div class="chips" id="chips"></div>
     <input class="search" id="q" type="search" placeholder="Поиск по ID, ФИО, тексту">
     <div class="selbar hidden" id="selbar"><span id="selinfo"></span><a href="#" id="selall">Выбрать все</a></div>
@@ -282,18 +281,17 @@
   function fillSelects(){
     const opt = (arr) => '<option value="">—</option>' + arr.map(v=>'<option>'+esc(v)+'</option>').join('');
     const f = $('#f');
-    const keep = {region:f.region.value, object:f.object.value};
-    f.region.innerHTML = opt(S.dict.regions);
+    const keep = {object:f.object.value};
     f.object.innerHTML = opt(S.dict.objects);
     f.category.innerHTML = opt(S.dict.categories);
-    f.region.value = keep.region; f.object.value = keep.object;
+    f.object.value = keep.object;
   }
   function resetForm(){
     const f=$('#f');
-    const keep={date:f.date.value, region:f.region.value, object:f.object.value};
+    const keep={date:f.date.value, object:f.object.value};
     f.reset();
     f.date.value = keep.date || S.today;
-    f.region.value = keep.region; f.object.value = keep.object;
+    f.object.value = keep.object;
   }
   async function submitNew(){
     const f=$('#f');
@@ -366,7 +364,7 @@
     $('#mc-title').textContent = 'ID '+c.caseId;
     const rows = [
       ['Статус', c.status], ['Дата', dmy(c.date)], ['Исполнитель', c.worker], ['Контакт', c.contact],
-      ['Регион', c.region], ['Объект', c.object], ['Категория', c.category], ['Суть', c.issue],
+      ['Регион', c.region], ['Диспетчерская', c.object], ['Категория', c.category], ['Суть', c.issue],
       ['Передано РМ', c.transferDate ? dmy(c.transferDate)+(c.transferBy?' ('+c.transferBy+')':'') : ''],
       ['Дней у РМ', c.daysWaiting!=null ? c.daysWaiting : ''], ['Решено', c.resolveDate ? dmy(c.resolveDate) : ''],
       ['Внёс', c.createdBy], ['Комментарии', c.comment]
