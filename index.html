@@ -58,6 +58,10 @@
   .p-tpw{background:#e5e7eb;color:#374151}.p-tpd{background:#dcfce7;color:#166534}.p-tpf{background:#fef3c7;color:#92400e}
   .p-rms{background:#dbeafe;color:#1e40af}.p-rmd{background:#dcfce7;color:#166534}.p-rmr{background:#f3f4f6;color:#4b5563}
   .late{color:var(--red);font-weight:600}
+  .item .id{word-break:break-all}
+  .lnk{display:inline-block;margin:6px 8px 0 0;font-size:13px;font-weight:600;color:var(--link);text-decoration:none;border:1px solid var(--line);border-radius:10px;padding:2px 9px;background:var(--bg)}
+  #refhint:empty{display:none}
+  .who{display:inline-block;font-size:12px;font-weight:600;border-radius:10px;padding:2px 8px;margin-top:6px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
   .empty{text-align:center;color:var(--hint);padding:40px 10px}
   .selbar{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--hint);margin-top:6px}
   .selbar a{color:var(--link)}
@@ -108,10 +112,10 @@
   <!-- НОВОЕ -->
   <section id="tab-new" class="hidden">
     <form id="f" class="card" autocomplete="off">
-      <div class="row2">
-        <div><label class="req">Дата обращения</label><input type="date" name="date" required></div>
-        <div><label class="req">ID обращения</label><input name="caseId" required inputmode="text"></div>
-      </div>
+      <label class="req">Ссылка на обращение</label>
+      <input name="caseId" required inputmode="url" placeholder="Вставьте ссылку из диспетчерской">
+      <div class="note" id="refhint"></div>
+      <label class="req">Дата обращения</label><input type="date" name="date" required>
       <label class="req">Исполнитель (ФИО)</label><input name="worker" required>
       <label>Контакт / ID исполнителя</label><input name="contact" placeholder="телефон или ID в Сменах">
       <div class="row2">
@@ -131,7 +135,7 @@
   <!-- ОБРАЩЕНИЯ -->
   <section id="tab-list" class="hidden">
     <div class="chips" id="chips"></div>
-    <input class="search" id="q" type="search" placeholder="Поиск по ID, ФИО, тексту">
+    <input class="search" id="q" type="search" placeholder="Поиск по ID, ФИО, тексту, автору">
     <div class="selbar hidden" id="selbar"><span id="selinfo"></span><a href="#" id="selall">Выбрать все</a></div>
     <div id="items"></div>
   </section>
@@ -161,6 +165,13 @@
 <div class="modal" id="m-case"><div class="sheet">
   <h3><span id="mc-title"></span><button data-close>✕</button></h3>
   <div class="kv" id="mc-kv"></div>
+  <button class="btn sec" id="mc-link">Открыть обращение в диспетчерской ↗</button>
+  <div class="gap"></div>
+  <button class="btn sec" id="mc-rmopen">Открыть сообщение в чате РМ ↗</button>
+  <div id="mc-rmwrap">
+    <label>Ссылка на сообщение в чате РМ</label>
+    <input id="mc-rmlink" inputmode="url" placeholder="https://t.me/c/…">
+  </div>
   <label>Статус</label>
   <div class="stgrid" id="mc-st"></div>
   <label>Добавить комментарий</label>
@@ -175,7 +186,14 @@
   <pre class="msg" id="mm-text"></pre>
   <div class="note" id="mm-note">Скопируйте и вставьте в чат региональных менеджеров.</div>
   <div class="gap"></div>
-  <button class="btn" id="mm-copy">Скопировать</button>
+  <button class="btn" id="mm-copy">1. Скопировать текст</button>
+  <div id="mm-rm">
+    <label>2. Ссылка на это сообщение в чате РМ</label>
+    <input id="mm-rmlink" inputmode="url" placeholder="https://t.me/c/…">
+    <div class="note">Отправьте текст в чат РМ → правой кнопкой по своему сообщению → «Копировать ссылку» → вставьте сюда.</div>
+    <div class="gap"></div>
+    <button class="btn sec" id="mm-rmsave">Сохранить ссылку</button>
+  </div>
 </div></div>
 
 <div class="toast" id="toast"></div>
@@ -203,6 +221,12 @@
   const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const dm = iso => iso ? iso.slice(8,10)+'.'+iso.slice(5,7) : '—';
   const dmy = iso => iso ? iso.slice(8,10)+'.'+iso.slice(5,7)+'.'+iso.slice(0,4) : '—';
+  const WHO_COLORS = [['#ede9fe','#5b21b6'],['#fce7f3','#9d174d'],['#ccfbf1','#115e59'],['#ffedd5','#9a3412'],['#e0e7ff','#3730a3'],['#fef9c3','#854d0e'],['#dcfce7','#166534'],['#fee2e2','#991b1b']];
+  const whoTag = name => { if(!name) return ''; let h=2166136261; for(const ch of String(name)) h=Math.imul(h^ch.charCodeAt(0),16777619)>>>0;
+    const c=WHO_COLORS[h%WHO_COLORS.length]; return '<span class="who" style="background:'+c[0]+';color:'+c[1]+'">👤 '+esc(name)+'</span>'; };
+  const parseRef = raw => { const s=String(raw||'').trim(); if(/^https?:\/\//i.test(s)){ const m=s.match(/[?&]id=([^&#\s]+)/); return {id:m?decodeURIComponent(m[1]):s, link:s}; } return {id:s, link:''}; };
+  const openLink = url => { try{ if(tg){ if(/^https:\/\/t\.me\//i.test(url) && tg.openTelegramLink){ tg.openTelegramLink(url); return; } if(tg.openLink){ tg.openLink(url); return; } } }catch(e){} window.open(url,'_blank'); };
+  const isTgLink = u => /^https:\/\/t\.me\/\S+$/i.test(String(u||'').trim());
   const haptic = t => { try{ tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred(t); }catch(e){} };
 
   function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('on'),2200); }
@@ -292,7 +316,9 @@
     f.reset();
     f.date.value = keep.date || S.today;
     f.object.value = keep.object;
+    $('#refhint').textContent='';
   }
+  $('#f').caseId.addEventListener('input', e => { const r=parseRef(e.target.value); $('#refhint').textContent = r.link && r.id!==r.link ? 'ID обращения: '+r.id : (r.link ? 'В ссылке нет id — сохраню ссылку целиком' : ''); });
   async function submitNew(){
     const f=$('#f');
     if(!f.reportValidity()) return;
@@ -300,7 +326,7 @@
     loading(true);
     try{
       await api('create', p);
-      haptic('success'); toast('Обращение '+p.caseId+' сохранено');
+      haptic('success'); toast('Обращение '+parseRef(p.caseId).id+' сохранено');
       await reload(); resetForm(); f.caseId.focus();
     }catch(e){ haptic('error'); alertBox(e.message); }
     finally{ loading(false); }
@@ -314,7 +340,7 @@
 
     const F = FILTERS.find(x=>x.k===S.filter);
     const q = S.q.trim().toLowerCase();
-    let list = S.cases.filter(F.f).filter(c => !q || [c.caseId,c.worker,c.contact,c.issue,c.region,c.object,c.category].join(' ').toLowerCase().includes(q));
+    let list = S.cases.filter(F.f).filter(c => !q || [c.caseId,c.link,c.rmLink,c.worker,c.contact,c.issue,c.region,c.object,c.category,c.createdBy].join(' ').toLowerCase().includes(q));
     if(S.filter==='rm') list.sort((a,b)=>(b.daysWaiting||0)-(a.daysWaiting||0));
     else list.sort((a,b)=> (b.date||'').localeCompare(a.date||'') || ((b.row||0)-(a.row||0)));
 
@@ -333,12 +359,13 @@
       return '<div class="item" data-id="'+esc(c.caseId)+'">'+
         (sel ? '<input type="checkbox" class="cb" '+(S.selected.has(c.caseId)?'checked':'')+'>' : '')+
         '<div class="body"><div class="top"><span class="id">ID '+esc(c.caseId)+'</span><span class="pill '+(PILL[c.status]||'')+'">'+esc(c.status)+'</span></div>'+
-        '<div class="meta">'+meta+'</div><div class="txt">'+esc(c.worker)+' — '+esc(c.issue)+'</div>'+wait+'</div></div>';
+        '<div class="meta">'+meta+'</div><div class="txt">'+esc(c.worker)+' — '+esc(c.issue)+'</div>'+wait+(c.link?'<a class="lnk" href="#" data-link="'+esc(c.link)+'">Открыть ↗</a>':'')+(c.rmLink?'<a class="lnk" href="#" data-link="'+esc(c.rmLink)+'">Чат РМ ↗</a>':'')+whoTag(c.createdBy)+'</div></div>';
     }).join('');
     document.querySelectorAll('.item').forEach(el => {
       const id = el.dataset.id;
       const cb = el.querySelector('.cb');
       if(cb) cb.onclick = (e) => { e.stopPropagation(); cb.checked ? S.selected.add(id) : S.selected.delete(id); $('#selinfo').textContent='Выбрано: '+S.selected.size+' из '+list.length; updateMainButton(); };
+      el.querySelectorAll('.lnk').forEach(ln => ln.onclick = (e) => { e.preventDefault(); e.stopPropagation(); openLink(ln.dataset.link); });
       el.onclick = () => openCase(id);
     });
   }
@@ -352,7 +379,7 @@
       const r = await api('transfer', {caseIds:ids});
       S.selected.clear(); haptic('success');
       await reload(); renderList(); updateMainButton();
-      showMsg('Передано РМ: '+r.count, r.text, 'Статус обращений уже сменился на «Передано РМ». Скопируйте текст и отправьте в чат региональных менеджеров.');
+      showMsg('Передано РМ: '+r.count, r.text, 'Статус обращений уже сменился на «Передано РМ».', ids);
     }catch(e){ haptic('error'); alertBox(e.message); }
     finally{ loading(false); }
   }
@@ -370,6 +397,10 @@
       ['Внёс', c.createdBy], ['Комментарии', c.comment]
     ].filter(r => r[1]!=='' && r[1]!=null);
     $('#mc-kv').innerHTML = rows.map(r => '<span>'+esc(r[0])+'</span><span style="white-space:pre-wrap">'+esc(r[1])+'</span>').join('');
+    const ml=$('#mc-link'); ml.classList.toggle('hidden', !c.link); ml.onclick = () => openLink(c.link);
+    const mr=$('#mc-rmopen'); mr.classList.toggle('hidden', !c.rmLink); mr.onclick = () => openLink(c.rmLink);
+    $('#mc-rmwrap').classList.toggle('hidden', !c.transferDate && c.status!=='Передано РМ');
+    $('#mc-rmlink').value = c.rmLink || '';
     renderStatusButtons();
     $('#mc-comment').value='';
     $('#m-case').classList.add('on');
@@ -380,10 +411,13 @@
   }
   $('#mc-save').onclick = async () => {
     const c = S.current; const comment = $('#mc-comment').value.trim();
-    if(S.newStatus===c.status && !comment){ closeModals(); return; }
+    const rm = $('#mc-rmlink').value.trim(); const rmChanged = rm !== (c.rmLink||'');
+    if(rmChanged && rm && !isTgLink(rm)){ alertBox('Ссылка на сообщение Telegram должна начинаться с https://t.me/'); return; }
+    if(S.newStatus===c.status && !comment && !rmChanged){ closeModals(); return; }
     loading(true);
     try{
-      await api('setStatus', {caseId:c.caseId, status:S.newStatus, comment});
+      if(rmChanged) await api('setRmLink', {caseIds:[c.caseId], link:rm});
+      if(S.newStatus!==c.status || comment) await api('setStatus', {caseId:c.caseId, status:S.newStatus, comment});
       haptic('success'); toast('Сохранено');
       closeModals(); await reload(); renderList(); updateMainButton();
     }catch(e){ haptic('error'); alertBox(e.message); }
@@ -418,9 +452,18 @@
   }
 
   /* ---------- модалки и копирование ---------- */
-  function showMsg(title, text, note){
+  function showMsg(title, text, note, ids){
     $('#mm-title').textContent=title; $('#mm-text').textContent=text; $('#mm-note').textContent=note||'';
     $('#mm-copy').onclick = ()=>copy(text);
+    $('#mm-rm').classList.toggle('hidden', !ids); $('#mm-rmlink').value='';
+    $('#mm-rmsave').onclick = async ()=>{
+      const link=$('#mm-rmlink').value.trim();
+      if(!isTgLink(link)){ alertBox('Вставьте ссылку на сообщение Telegram — она начинается с https://t.me/'); return; }
+      loading(true);
+      try{ await api('setRmLink',{caseIds:ids, link}); haptic('success'); toast('Ссылка сохранена'); closeModals(); await reload(); renderList(); }
+      catch(e){ haptic('error'); alertBox(e.message); }
+      finally{ loading(false); }
+    };
     $('#m-msg').classList.add('on');
   }
   function closeModals(){ document.querySelectorAll('.modal').forEach(m=>m.classList.remove('on')); }
