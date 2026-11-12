@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Реестр обращений</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root{
+    --bg:var(--tg-theme-bg-color,#ffffff);
+    --bg2:var(--tg-theme-secondary-bg-color,#f1f2f6);
+    --text:var(--tg-theme-text-color,#111827);
+    --hint:var(--tg-theme-hint-color,#8a8f98);
+    --link:var(--tg-theme-link-color,#2a7ae2);
+    --btn:var(--tg-theme-button-color,#2a7ae2);
+    --btnt:var(--tg-theme-button-text-color,#ffffff);
+    --line:color-mix(in srgb,var(--hint) 25%,transparent);
+    --red:#e5484d;--amber:#d97706;--green:#16a34a;--blue:#2a7ae2;--grey:#6b7280;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg2);color:var(--text);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:640px;margin:0 auto;padding:0 12px 110px}
+  header{position:sticky;top:0;z-index:5;background:var(--bg2);padding:10px 12px 8px;max-width:640px;margin:0 auto}
+  .title{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+  .title b{font-size:17px}.title span{color:var(--hint);font-size:13px}
+  .tabs{display:flex;background:var(--bg);border-radius:10px;padding:3px}
+  .tabs button{flex:1;border:0;background:none;color:var(--text);padding:8px 4px;border-radius:8px;font:inherit;font-weight:500}
+  .tabs button.on{background:var(--btn);color:var(--btnt)}
+  .card{background:var(--bg);border-radius:12px;padding:12px;margin:10px 0}
+  label{display:block;font-size:13px;color:var(--hint);margin:10px 0 4px}
+  label:first-child{margin-top:0}
+  input,select,textarea{width:100%;border:1px solid var(--line);background:var(--bg);color:var(--text);border-radius:8px;padding:10px;font:inherit}
+  textarea{resize:vertical;min-height:72px}
+  .req::after{content:" *";color:var(--red)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .seg{display:flex;flex-direction:column;gap:6px}
+  .seg label{display:flex;gap:8px;align-items:center;margin:0;color:var(--text);font-size:15px;background:var(--bg2);padding:10px;border-radius:8px}
+  .seg input{width:auto;margin:0}
+  .btn{display:block;width:100%;border:0;border-radius:10px;padding:13px;background:var(--btn);color:var(--btnt);font:inherit;font-weight:600}
+  .btn.sec{background:var(--bg2);color:var(--link)}
+  .btn:disabled{opacity:.5}
+  .sticky{position:fixed;left:0;right:0;bottom:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:var(--bg2);border-top:1px solid var(--line)}
+  .sticky .in{max-width:616px;margin:0 auto}
+  .chips{display:flex;gap:6px;overflow-x:auto;padding:8px 0 2px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:none;border:1px solid var(--line);background:var(--bg);color:var(--text);border-radius:16px;padding:6px 11px;font:inherit;font-size:13px}
+  .chip.on{background:var(--btn);border-color:var(--btn);color:var(--btnt)}
+  .chip i{font-style:normal;opacity:.7;margin-left:4px}
+  .search{margin-top:8px}
+  .item{background:var(--bg);border-radius:12px;padding:11px 12px;margin:8px 0;display:flex;gap:10px;align-items:flex-start}
+  .item .cb{width:22px;height:22px;margin-top:2px;flex:none;accent-color:var(--btn)}
+  .item .body{flex:1;min-width:0}
+  .item .top{display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .item .id{font-weight:600}
+  .item .meta{color:var(--hint);font-size:13px;margin-top:2px}
+  .item .txt{margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .pill{font-size:12px;border-radius:10px;padding:2px 8px;white-space:nowrap;font-weight:500}
+  .p-tpw{background:#e5e7eb;color:#374151}.p-tpd{background:#dcfce7;color:#166534}.p-tpf{background:#fef3c7;color:#92400e}
+  .p-rms{background:#dbeafe;color:#1e40af}.p-rmd{background:#dcfce7;color:#166534}.p-rmr{background:#f3f4f6;color:#4b5563}
+  .late{color:var(--red);font-weight:600}
+  .empty{text-align:center;color:var(--hint);padding:40px 10px}
+  .selbar{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--hint);margin-top:6px}
+  .selbar a{color:var(--link)}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .stat{background:var(--bg);border-radius:12px;padding:12px}
+  .stat b{display:block;font-size:24px}.stat span{color:var(--hint);font-size:13px}
+  .week{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border-radius:12px;padding:6px}
+  .week button{border:0;background:var(--bg2);color:var(--link);width:40px;height:36px;border-radius:8px;font-size:18px}
+  .week div{font-weight:600}
+  pre.msg{white-space:pre-wrap;word-break:break-word;background:var(--bg2);padding:10px;border-radius:8px;font:13px/1.45 inherit;margin:0;max-height:45vh;overflow:auto}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:none;align-items:flex-end}
+  .modal.on{display:flex}
+  .sheet{background:var(--bg);width:100%;max-width:640px;margin:0 auto;border-radius:16px 16px 0 0;padding:16px 14px calc(16px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto}
+  .sheet h3{margin:0 0 10px;font-size:17px;display:flex;justify-content:space-between;align-items:center}
+  .sheet h3 button{border:0;background:var(--bg2);color:var(--hint);width:30px;height:30px;border-radius:15px;font-size:16px}
+  .kv{display:grid;grid-template-columns:110px 1fr;gap:4px 10px;font-size:14px;margin-bottom:10px}
+  .kv span:nth-child(odd){color:var(--hint)}
+  .stgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0 12px}
+  .stgrid button{border:1px solid var(--line);background:var(--bg);color:var(--text);border-radius:8px;padding:9px 6px;font:inherit;font-size:14px}
+  .stgrid button.on{border-color:var(--btn);background:var(--btn);color:var(--btnt)}
+  .gap{height:8px}
+  .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#111827;color:#fff;padding:9px 14px;border-radius:10px;font-size:14px;z-index:30;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%}
+  .toast.on{opacity:1}
+  .loader{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:40;background:color-mix(in srgb,var(--bg2) 60%,transparent)}
+  .loader.on{display:flex}
+  .spin{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--btn);border-radius:50%;animation:r .8s linear infinite}
+  @keyframes r{to{transform:rotate(360deg)}}
+  .hidden{display:none!important}
+  .note{font-size:13px;color:var(--hint);margin-top:8px}
+</style>
+</head>
+<body>
+
+<header id="hdr" class="hidden">
+  <div class="title"><b>Реестр обращений</b><span id="uname"></span></div>
+  <div class="tabs">
+    <button data-tab="new">Новое</button>
+    <button data-tab="list" class="on">Обращения</button>
+    <button data-tab="sum">Сводка</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- Нет доступа / ошибка запуска -->
+  <div id="gate" class="card hidden"></div>
+
+  <!-- НОВОЕ -->
+  <section id="tab-new" class="hidden">
+    <form id="f" class="card" autocomplete="off">
+      <div class="row2">
+        <div><label class="req">Дата обращения</label><input type="date" name="date" required></div>
+        <div><label class="req">ID обращения</label><input name="caseId" required inputmode="text"></div>
+      </div>
+      <label class="req">Исполнитель (ФИО)</label><input name="worker" required>
+      <label>Контакт / ID исполнителя</label><input name="contact" placeholder="телефон или ID в Сменах">
+      <div class="row2">
+        <div><label>Регион</label><select name="region"></select></div>
+        <div><label>Объект</label><select name="object"></select></div>
+      </div>
+      <label>Категория</label><select name="category"></select>
+      <label class="req">Суть вопроса</label><textarea name="issue" required placeholder="Коротко: что случилось, какая смена, какая сумма"></textarea>
+      <label>Что сейчас с обращением</label>
+      <div class="seg">
+        <label><input type="radio" name="status" value="В работе ТП" checked> ТП ещё разбирается</label>
+        <label><input type="radio" name="status" value="Не решено ТП"> ТП не решила — нужно передать РМ</label>
+        <label><input type="radio" name="status" value="Решено ТП"> ТП уже решила</label>
+      </div>
+    </form>
+  </section>
+
+  <!-- ОБРАЩЕНИЯ -->
+  <section id="tab-list">
+    <div class="chips" id="chips"></div>
+    <input class="search" id="q" type="search" placeholder="Поиск по ID, ФИО, тексту">
+    <div class="selbar hidden" id="selbar"><span id="selinfo"></span><a href="#" id="selall">Выбрать все</a></div>
+    <div id="items"></div>
+  </section>
+
+  <!-- СВОДКА -->
+  <section id="tab-sum" class="hidden">
+    <div class="week" style="margin-top:10px">
+      <button id="wprev">‹</button><div id="wlabel"></div><button id="wnext">›</button>
+    </div>
+    <div class="stats" style="margin-top:8px">
+      <div class="stat"><b id="s-sent">—</b><span>передано РМ</span></div>
+      <div class="stat"><b id="s-solved">—</b><span>решено РМ</span></div>
+      <div class="stat"><b id="s-wait">—</b><span>без ответа (за неделю)</span></div>
+      <div class="stat"><b id="s-open">—</b><span>без ответа всего на сегодня</span></div>
+    </div>
+    <div class="card">
+      <label style="margin-top:0">Текст для чата региональных менеджеров</label>
+      <pre class="msg" id="s-text"></pre>
+    </div>
+  </section>
+</div>
+
+<!-- нижняя кнопка -->
+<div class="sticky hidden" id="sticky"><div class="in"><button class="btn" id="mainbtn"></button></div></div>
+
+<!-- карточка обращения -->
+<div class="modal" id="m-case"><div class="sheet">
+  <h3><span id="mc-title"></span><button data-close>✕</button></h3>
+  <div class="kv" id="mc-kv"></div>
+  <label>Статус</label>
+  <div class="stgrid" id="mc-st"></div>
+  <label>Добавить комментарий</label>
+  <textarea id="mc-comment" placeholder="Например: РМ ответил, ждём перерасчёт"></textarea>
+  <div class="gap"></div>
+  <button class="btn" id="mc-save">Сохранить</button>
+</div></div>
+
+<!-- готовое сообщение -->
+<div class="modal" id="m-msg"><div class="sheet">
+  <h3><span id="mm-title">Сообщение для РМ</span><button data-close>✕</button></h3>
+  <pre class="msg" id="mm-text"></pre>
+  <div class="note" id="mm-note">Скопируйте и вставьте в чат региональных менеджеров.</div>
+  <div class="gap"></div>
+  <button class="btn" id="mm-copy">Скопировать</button>
+</div></div>
+
+<div class="toast" id="toast"></div>
+<div class="loader" id="loader"><div class="spin"></div></div>
+
+<script>
+(function(){
+  const tg = window.Telegram && Telegram.WebApp;
+  const qs = new URLSearchParams(location.search);
+  const API_URL = qs.get('api') || ''; // адрес подставляется кнопкой бота автоматически
+
+  const S = { user:null, dict:{regions:[],objects:[],categories:[]}, statuses:[], cases:[], today:'', alertDays:3,
+              tab:'list', filter:'tofwd', q:'', selected:new Set(), weekFrom:null, current:null, newStatus:null, summaryText:'' };
+
+  const FILTERS = [
+    {k:'tofwd', t:'К передаче РМ', f:c=>c.status==='Не решено ТП'},
+    {k:'rm',    t:'У РМ',          f:c=>c.status==='Передано РМ'},
+    {k:'tp',    t:'У ТП',          f:c=>c.status==='В работе ТП'},
+    {k:'closed',t:'Закрытые',      f:c=>['Решено ТП','Решено РМ','Отказ РМ'].includes(c.status)},
+    {k:'all',   t:'Все',           f:c=>true}
+  ];
+  const PILL = {'В работе ТП':'p-tpw','Решено ТП':'p-tpd','Не решено ТП':'p-tpf','Передано РМ':'p-rms','Решено РМ':'p-rmd','Отказ РМ':'p-rmr'};
+
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const dm = iso => iso ? iso.slice(8,10)+'.'+iso.slice(5,7) : '—';
+  const dmy = iso => iso ? iso.slice(8,10)+'.'+iso.slice(5,7)+'.'+iso.slice(0,4) : '—';
+  const haptic = t => { try{ tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred(t); }catch(e){} };
+
+  function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('on'),2200); }
+  function loading(on){ $('#loader').classList.toggle('on', on); }
+  function alertBox(msg){ if(tg && tg.showAlert) { try{ tg.showAlert(msg); return; }catch(e){} } alert(msg); }
+
+  async function api(action, payload){
+    if(!API_URL) throw new Error('Не задан адрес сервера. Откройте реестр через кнопку «Реестр» в боте.');
+    const r = await fetch(API_URL, { method:'POST', body: JSON.stringify({ action, payload: payload||{}, initData: tg ? tg.initData : '' }) });
+    const j = await r.json();
+    if(!j.ok){ const e = new Error(j.error||'Ошибка'); e.code=j.code; e.tgId=j.tgId; throw e; }
+    return j.data;
+  }
+
+  /* ---------- запуск ---------- */
+  async function start(){
+    if(tg){ tg.ready(); tg.expand(); }
+    loading(true);
+    try{
+      const d = await api('init');
+      Object.assign(S, { user:d.user, dict:d.dict, statuses:d.statuses, cases:d.cases, today:d.today, alertDays:d.alertDays });
+      $('#hdr').classList.remove('hidden');
+      $('#uname').textContent = d.user.name;
+      fillSelects();
+      resetForm();
+      S.weekFrom = mondayOf(d.today, -1);
+      if(!S.cases.some(c=>c.status==='Не решено ТП')) S.filter = 'rm';
+      setTab('list');
+    }catch(e){
+      showGate(e);
+    }finally{ loading(false); }
+  }
+
+  function showGate(e){
+    const g = $('#gate'); g.classList.remove('hidden');
+    if(e.code==='NO_ACCESS'){
+      g.innerHTML = '<b>Нет доступа к реестру</b><p>Передайте администратору ваш Telegram ID — он добавит его на лист «Доступ» в таблице.</p>'+
+        '<pre class="msg" style="font-size:20px;text-align:center">'+esc(e.tgId)+'</pre><div class="gap"></div>'+
+        '<button class="btn" id="cpid">Скопировать ID</button><div class="gap"></div><button class="btn sec" onclick="location.reload()">Проверить снова</button>';
+      $('#cpid').onclick = ()=>copy(String(e.tgId));
+    } else {
+      g.innerHTML = '<b>Не удалось открыть реестр</b><p>'+esc(e.message)+'</p><button class="btn sec" onclick="location.reload()">Попробовать снова</button>';
+    }
+  }
+
+  async function reload(){
+    const d = await api('init');
+    S.cases = d.cases; S.dict = d.dict; S.today = d.today;
+  }
+
+  /* ---------- вкладки ---------- */
+  document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+  function setTab(t){
+    S.tab = t;
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab===t));
+    ['new','list','sum'].forEach(k => $('#tab-'+k).classList.toggle('hidden', k!==t));
+    window.scrollTo(0,0);
+    if(t==='list') renderList();
+    if(t==='sum') loadSummary();
+    updateMainButton();
+  }
+
+  function updateMainButton(){
+    const st=$('#sticky'), b=$('#mainbtn');
+    if(S.tab==='new'){ st.classList.remove('hidden'); b.textContent='Сохранить обращение'; b.disabled=false; b.onclick=submitNew; }
+    else if(S.tab==='list' && S.filter==='tofwd'){
+      st.classList.remove('hidden'); const n=S.selected.size;
+      b.textContent = n ? 'Передать РМ и получить текст ('+n+')' : 'Отметьте обращения для передачи РМ';
+      b.disabled = !n; b.onclick = transfer;
+    }
+    else if(S.tab==='sum'){ st.classList.remove('hidden'); b.textContent='Скопировать сводку'; b.disabled=!S.summaryText; b.onclick=()=>copy(S.summaryText); }
+    else st.classList.add('hidden');
+  }
+
+  /* ---------- новое обращение ---------- */
+  function fillSelects(){
+    const opt = (arr) => '<option value="">—</option>' + arr.map(v=>'<option>'+esc(v)+'</option>').join('');
+    const f = $('#f');
+    const keep = {region:f.region.value, object:f.object.value};
+    f.region.innerHTML = opt(S.dict.regions);
+    f.object.innerHTML = opt(S.dict.objects);
+    f.category.innerHTML = opt(S.dict.categories);
+    f.region.value = keep.region; f.object.value = keep.object;
+  }
+  function resetForm(){
+    const f=$('#f');
+    const keep={date:f.date.value, region:f.region.value, object:f.object.value};
+    f.reset();
+    f.date.value = keep.date || S.today;
+    f.region.value = keep.region; f.object.value = keep.object;
+  }
+  async function submitNew(){
+    const f=$('#f');
+    if(!f.reportValidity()) return;
+    const p = Object.fromEntries(new FormData(f).entries());
+    loading(true);
+    try{
+      await api('create', p);
+      haptic('success'); toast('Обращение '+p.caseId+' сохранено');
+      await reload(); resetForm(); f.caseId.focus();
+    }catch(e){ haptic('error'); alertBox(e.message); }
+    finally{ loading(false); }
+  }
+
+  /* ---------- список ---------- */
+  function renderList(){
+    const counts = {}; FILTERS.forEach(x => counts[x.k] = S.cases.filter(x.f).length);
+    $('#chips').innerHTML = FILTERS.map(x => '<button class="chip'+(x.k===S.filter?' on':'')+'" data-f="'+x.k+'">'+x.t+(x.k!=='all'&&x.k!=='closed'?'<i>'+counts[x.k]+'</i>':'')+'</button>').join('');
+    document.querySelectorAll('.chip').forEach(c => c.onclick = () => { S.filter=c.dataset.f; S.selected.clear(); renderList(); updateMainButton(); });
+
+    const F = FILTERS.find(x=>x.k===S.filter);
+    const q = S.q.trim().toLowerCase();
+    let list = S.cases.filter(F.f).filter(c => !q || [c.caseId,c.worker,c.contact,c.issue,c.region,c.object,c.category].join(' ').toLowerCase().includes(q));
+    if(S.filter==='rm') list.sort((a,b)=>(b.daysWaiting||0)-(a.daysWaiting||0));
+    else list.sort((a,b)=> (b.date||'').localeCompare(a.date||'') || ((b.row||0)-(a.row||0)));
+
+    const sel = S.filter==='tofwd';
+    $('#selbar').classList.toggle('hidden', !sel || !list.length);
+    if(sel){ $('#selinfo').textContent = 'Выбрано: '+S.selected.size+' из '+list.length;
+      $('#selall').textContent = S.selected.size===list.length ? 'Снять все' : 'Выбрать все';
+      $('#selall').onclick = (e)=>{ e.preventDefault(); if(S.selected.size===list.length) S.selected.clear(); else list.forEach(c=>S.selected.add(c.caseId)); renderList(); updateMainButton(); };
+    }
+
+    if(!list.length){ $('#items').innerHTML = '<div class="empty">'+(q?'Ничего не найдено':'Здесь пока пусто')+'</div>'; return; }
+    $('#items').innerHTML = list.map(c => {
+      const late = c.daysWaiting!=null && c.daysWaiting > S.alertDays;
+      const meta = [dm(c.date), c.region, c.object, c.category].filter(Boolean).map(esc).join(' · ');
+      const wait = c.daysWaiting!=null ? '<div class="meta'+(late?' late':'')+'">У РМ '+c.daysWaiting+' дн. · передано '+dm(c.transferDate)+'</div>' : '';
+      return '<div class="item" data-id="'+esc(c.caseId)+'">'+
+        (sel ? '<input type="checkbox" class="cb" '+(S.selected.has(c.caseId)?'checked':'')+'>' : '')+
+        '<div class="body"><div class="top"><span class="id">ID '+esc(c.caseId)+'</span><span class="pill '+(PILL[c.status]||'')+'">'+esc(c.status)+'</span></div>'+
+        '<div class="meta">'+meta+'</div><div class="txt">'+esc(c.worker)+' — '+esc(c.issue)+'</div>'+wait+'</div></div>';
+    }).join('');
+    document.querySelectorAll('.item').forEach(el => {
+      const id = el.dataset.id;
+      const cb = el.querySelector('.cb');
+      if(cb) cb.onclick = (e) => { e.stopPropagation(); cb.checked ? S.selected.add(id) : S.selected.delete(id); $('#selinfo').textContent='Выбрано: '+S.selected.size+' из '+list.length; updateMainButton(); };
+      el.onclick = () => openCase(id);
+    });
+  }
+  $('#q').oninput = (e)=>{ S.q = e.target.value; renderList(); };
+
+  async function transfer(){
+    const ids = [...S.selected];
+    if(!ids.length) return;
+    loading(true);
+    try{
+      const r = await api('transfer', {caseIds:ids});
+      S.selected.clear(); haptic('success');
+      await reload(); renderList(); updateMainButton();
+      showMsg('Передано РМ: '+r.count, r.text, 'Статус обращений уже сменился на «Передано РМ». Скопируйте текст и отправьте в чат региональных менеджеров.');
+    }catch(e){ haptic('error'); alertBox(e.message); }
+    finally{ loading(false); }
+  }
+
+  /* ---------- карточка ---------- */
+  function openCase(id){
+    const c = S.cases.find(x=>x.caseId===id); if(!c) return;
+    S.current = c; S.newStatus = c.status;
+    $('#mc-title').textContent = 'ID '+c.caseId;
+    const rows = [
+      ['Статус', c.status], ['Дата', dmy(c.date)], ['Исполнитель', c.worker], ['Контакт', c.contact],
+      ['Регион', c.region], ['Объект', c.object], ['Категория', c.category], ['Суть', c.issue],
+      ['Передано РМ', c.transferDate ? dmy(c.transferDate)+(c.transferBy?' ('+c.transferBy+')':'') : ''],
+      ['Дней у РМ', c.daysWaiting!=null ? c.daysWaiting : ''], ['Решено', c.resolveDate ? dmy(c.resolveDate) : ''],
+      ['Внёс', c.createdBy], ['Комментарии', c.comment]
+    ].filter(r => r[1]!=='' && r[1]!=null);
+    $('#mc-kv').innerHTML = rows.map(r => '<span>'+esc(r[0])+'</span><span style="white-space:pre-wrap">'+esc(r[1])+'</span>').join('');
+    renderStatusButtons();
+    $('#mc-comment').value='';
+    $('#m-case').classList.add('on');
+  }
+  function renderStatusButtons(){
+    $('#mc-st').innerHTML = S.statuses.map(s => '<button class="'+(s===S.newStatus?'on':'')+'" data-s="'+esc(s)+'">'+esc(s)+'</button>').join('');
+    document.querySelectorAll('#mc-st button').forEach(b => b.onclick = () => { S.newStatus=b.dataset.s; renderStatusButtons(); });
+  }
+  $('#mc-save').onclick = async () => {
+    const c = S.current; const comment = $('#mc-comment').value.trim();
+    if(S.newStatus===c.status && !comment){ closeModals(); return; }
+    loading(true);
+    try{
+      await api('setStatus', {caseId:c.caseId, status:S.newStatus, comment});
+      haptic('success'); toast('Сохранено');
+      closeModals(); await reload(); renderList(); updateMainButton();
+    }catch(e){ haptic('error'); alertBox(e.message); }
+    finally{ loading(false); }
+  };
+
+  /* ---------- сводка ---------- */
+  function mondayOf(iso, weekShift){
+    const d = new Date(iso+'T00:00:00Z'); const dow=(d.getUTCDay()+6)%7;
+    return new Date(d.getTime() - dow*864e5 + (weekShift||0)*7*864e5).toISOString().slice(0,10);
+  }
+  const addDays = (iso,n) => new Date(new Date(iso+'T00:00:00Z').getTime()+n*864e5).toISOString().slice(0,10);
+  $('#wprev').onclick = ()=>{ S.weekFrom = addDays(S.weekFrom,-7); loadSummary(); };
+  $('#wnext').onclick = ()=>{ const n=addDays(S.weekFrom,7); if(n>S.today) return; S.weekFrom=n; loadSummary(); };
+
+  async function loadSummary(){
+    const from=S.weekFrom, to=addDays(from,6);
+    $('#wlabel').textContent = dm(from)+' – '+dmy(to);
+    $('#wnext').disabled = addDays(from,7) > S.today;
+    S.summaryText=''; updateMainButton();
+    loading(true);
+    try{
+      const s = await api('summary', {from, to});
+      $('#s-sent').textContent = s.sent;
+      $('#s-solved').textContent = s.solved + (s.sent ? ' ('+s.pct+'%)' : '');
+      $('#s-wait').textContent = s.waiting;
+      $('#s-open').textContent = s.openNow;
+      $('#s-text').textContent = s.text;
+      S.summaryText = s.text; updateMainButton();
+    }catch(e){ alertBox(e.message); }
+    finally{ loading(false); }
+  }
+
+  /* ---------- модалки и копирование ---------- */
+  function showMsg(title, text, note){
+    $('#mm-title').textContent=title; $('#mm-text').textContent=text; $('#mm-note').textContent=note||'';
+    $('#mm-copy').onclick = ()=>copy(text);
+    $('#m-msg').classList.add('on');
+  }
+  function closeModals(){ document.querySelectorAll('.modal').forEach(m=>m.classList.remove('on')); }
+  document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeModals);
+  document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click', e=>{ if(e.target===m) closeModals(); }));
+
+  async function copy(text){
+    let ok=false;
+    try{ await navigator.clipboard.writeText(text); ok=true; }catch(e){}
+    if(!ok){
+      const ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      try{ ok=document.execCommand('copy'); }catch(e){}
+      document.body.removeChild(ta);
+    }
+    if(ok){ haptic('success'); toast('Скопировано'); }
+    else alertBox('Не получилось скопировать автоматически — выделите текст пальцем и скопируйте.');
+  }
+
+  start();
+})();
+</script>
+</body>
+</html>
